@@ -264,13 +264,13 @@ public class MappingEngine {
     }
 
     private SourceParser getSourceParser(String format) {
-        if ("XML".equalsIgnoreCase(format)) return xmlSourceParser;
+        if ("XML".equalsIgnoreCase(format) || "HL7_V3".equalsIgnoreCase(format)) return xmlSourceParser;
         if ("JSON".equalsIgnoreCase(format)) return jsonSourceParser;
         throw new RuntimeException("不支持的源格式: " + format);
     }
 
     private TargetBuilder getTargetBuilder(String format) {
-        if ("XML".equalsIgnoreCase(format)) return xmlTargetBuilder;
+        if ("XML".equalsIgnoreCase(format) || "HL7_V3".equalsIgnoreCase(format)) return xmlTargetBuilder;
         if ("JSON".equalsIgnoreCase(format)) return jsonTargetBuilder;
         throw new RuntimeException("不支持的目标格式: " + format);
     }

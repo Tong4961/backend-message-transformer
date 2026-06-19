@@ -16,6 +16,7 @@ public class Template {
     private String sampleData;
     private Long parentId;
     private String description;
+    private String tags;
     private String createdBy;
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;

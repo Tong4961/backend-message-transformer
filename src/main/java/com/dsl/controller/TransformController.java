@@ -121,7 +121,7 @@ public class TransformController {
     @PostMapping("/parse-structure")
     public R<List<TreeNode>> parseStructure(@RequestBody ParseRequest request) {
         List<TreeNode> nodes;
-        if ("XML".equalsIgnoreCase(request.getFormat())) {
+        if ("XML".equalsIgnoreCase(request.getFormat()) || "HL7_V3".equalsIgnoreCase(request.getFormat())) {
             nodes = xmlSourceParser.parseStructure(request.getData());
         } else {
             nodes = jsonSourceParser.parseStructure(request.getData());
