@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("audit_log")
 public class AuditLog {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     private String type; // TRANSFORM / CONFIG
     private String traceId;

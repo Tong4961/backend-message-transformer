@@ -2,10 +2,14 @@ package com.dsl.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dsl.common.result.R;
+import com.dsl.engine.model.TreeNode;
+import com.dsl.engine.parser.JsonSourceParser;
+import com.dsl.engine.parser.XmlSourceParser;
 import com.dsl.entity.Template;
 import com.dsl.service.TemplateService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,9 +19,15 @@ import java.util.Map;
 public class TemplateController {
 
     private final TemplateService templateService;
+    private final XmlSourceParser xmlSourceParser;
+    private final JsonSourceParser jsonSourceParser;
 
-    public TemplateController(TemplateService templateService) {
+    public TemplateController(TemplateService templateService,
+                              XmlSourceParser xmlSourceParser,
+                              JsonSourceParser jsonSourceParser) {
         this.templateService = templateService;
+        this.xmlSourceParser = xmlSourceParser;
+        this.jsonSourceParser = jsonSourceParser;
     }
 
     @GetMapping("/list")
@@ -45,6 +55,28 @@ public class TemplateController {
     @GetMapping("/{id}")
     public R<Template> getById(@PathVariable Long id) {
         return R.ok(templateService.getById(id));
+    }
+
+    @GetMapping("/{id}/structure")
+    public R<List<TreeNode>> getStructure(@PathVariable Long id) {
+        Template template = templateService.getById(id);
+        if (template == null) {
+            return R.fail("模板不存在");
+        }
+        String data = template.getSchemaData();
+        if (data == null || data.isEmpty()) {
+            data = template.getSampleData();
+        }
+        if (data == null || data.isEmpty()) {
+            return R.ok(Collections.emptyList());
+        }
+        List<TreeNode> nodes;
+        if ("JSON".equalsIgnoreCase(template.getFormat())) {
+            nodes = jsonSourceParser.parseStructure(data);
+        } else {
+            nodes = xmlSourceParser.parseStructure(data);
+        }
+        return R.ok(nodes);
     }
 
     @GetMapping("/code/{code}")

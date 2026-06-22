@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("mapping_rule")
 public class MappingRule {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     private Long converterId;
     private String sourceExpression;

@@ -14,7 +14,6 @@ import com.dsl.mapper.ConverterVersionMapper;
 import com.dsl.mapper.MappingRuleMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.benmanes.caffeine.cache.Cache;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,19 +26,16 @@ public class ConverterService {
     private final ConverterMapper converterMapper;
     private final MappingRuleMapper mappingRuleMapper;
     private final ConverterVersionMapper versionMapper;
-    private final Cache<String, Object> converterCache;
     private final AuditUtil auditUtil;
     private final ObjectMapper objectMapper = new ObjectMapper()
         .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
         .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     public ConverterService(ConverterMapper converterMapper, MappingRuleMapper mappingRuleMapper,
-                           ConverterVersionMapper versionMapper, Cache<String, Object> converterCache,
-                           AuditUtil auditUtil) {
+                           ConverterVersionMapper versionMapper, AuditUtil auditUtil) {
         this.converterMapper = converterMapper;
         this.mappingRuleMapper = mappingRuleMapper;
         this.versionMapper = versionMapper;
-        this.converterCache = converterCache;
         this.auditUtil = auditUtil;
     }
 
@@ -101,7 +97,7 @@ public class ConverterService {
         }
         converter.setUpdatedTime(LocalDateTime.now());
         converterMapper.updateById(converter);
-        invalidateCache(converter.getId());
+
         if (logAudit) {
             auditUtil.logConfig("UPDATE", "CONVERTER", existing.getName(), converter.getId(), existing.getCode());
         }
@@ -117,7 +113,6 @@ public class ConverterService {
         }
         converterMapper.deleteById(id);
         mappingRuleMapper.delete(new LambdaQueryWrapper<MappingRule>().eq(MappingRule::getConverterId, id));
-        invalidateCache(id);
         auditUtil.logConfig("DELETE", "CONVERTER", converter.getName(), id, converter.getCode());
     }
 
@@ -133,7 +128,6 @@ public class ConverterService {
         converter.setVersion(converter.getVersion() + 1);
         converter.setUpdatedTime(LocalDateTime.now());
         converterMapper.updateById(converter);
-        invalidateCache(id);
     }
 
     @Transactional
@@ -143,7 +137,6 @@ public class ConverterService {
         converter.setStatus(ConverterStatus.DISABLED.name());
         converter.setUpdatedTime(LocalDateTime.now());
         converterMapper.updateById(converter);
-        invalidateCache(id);
     }
 
     @Transactional
@@ -271,7 +264,6 @@ public class ConverterService {
                     mappingRuleMapper.insert(rule);
                 }
             }
-            invalidateCache(converterId);
         } catch (Exception e) {
             throw new BizException("回滚失败: " + e.getMessage());
         }
@@ -296,9 +288,5 @@ public class ConverterService {
         } catch (Exception e) {
             throw new BizException("保存版本快照失败: " + e.getMessage());
         }
-    }
-
-    private void invalidateCache(Long converterId) {
-        converterCache.invalidate("converter:" + converterId);
     }
 }

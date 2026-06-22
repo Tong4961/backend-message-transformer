@@ -22,7 +22,6 @@
         <java.version>1.8</java.version>
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
         <jsonpath.version>2.9.0</jsonpath.version>
-        <caffeine.version>2.9.3</caffeine.version>
         <hutool.version>5.8.25</hutool.version>
     </properties>
 
@@ -70,13 +69,6 @@
             <groupId>com.jayway.jsonpath</groupId>
             <artifactId>json-path</artifactId>
             <version>${jsonpath.version}</version>
-        </dependency>
-
-        <!-- Caffeine Cache -->
-        <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
-            <version>${caffeine.version}</version>
         </dependency>
 
         <!-- Apache Commons Lang3 -->

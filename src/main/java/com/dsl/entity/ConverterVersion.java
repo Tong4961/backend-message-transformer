@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("converter_version")
 public class ConverterVersion {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     private Long converterId;
     private Integer version;

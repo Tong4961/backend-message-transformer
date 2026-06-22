@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("converter")
 public class Converter {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     private String code;
     private String name;
