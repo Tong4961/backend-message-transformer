@@ -20,6 +20,8 @@ public class MappingRule {
     private String conditionExpression;
     private String conditionValue;
     private String description;
+    private String mappingType;
+    private String loopConfig;
     private Integer enabled;
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;

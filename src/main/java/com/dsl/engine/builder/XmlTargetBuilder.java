@@ -129,6 +129,7 @@ public class XmlTargetBuilder implements TargetBuilder {
             document.replaceChild(newRoot, rootElement);
             rootElement = newRoot;
             hasTemplate = true;
+            clearedArrays.clear();
         } catch (Exception e) {
             // If parsing fails, silently skip
         }
@@ -151,6 +152,180 @@ public class XmlTargetBuilder implements TargetBuilder {
             }
         }
         return null;
+    }
+
+    // Track arrays that have been cleared for loop usage
+    private final java.util.Set<String> clearedArrays = new java.util.HashSet<>();
+
+    @Override
+    public Object addArrayItem(String arrayExpression) {
+        if (rootElement == null || document == null) return null;
+        String path = arrayExpression.startsWith("/") ? arrayExpression.substring(1) : arrayExpression;
+        String[] parts = path.split("/");
+        int startIdx = 0;
+        if (parts.length > 1 && parts[0].equals(rootElement.getNodeName())) {
+            startIdx = 1;
+        }
+        String[] normParts = new String[parts.length - startIdx];
+        System.arraycopy(parts, startIdx, normParts, 0, normParts.length);
+
+        Element current = rootElement;
+        for (int i = 0; i < normParts.length; i++) {
+            String part = normParts[i];
+            Element child = findChild(current, part);
+            if (child == null) {
+                child = document.createElement(part);
+                current.appendChild(child);
+            }
+            if (i < normParts.length - 1) {
+                current = child;
+            }
+        }
+
+        // Clear existing template array siblings on first loop add
+        String tagName = normParts[normParts.length - 1];
+        if (!clearedArrays.contains(tagName)) {
+            Node parentNode = current.getParentNode();
+            Element parent;
+            if (parentNode instanceof Element) {
+                parent = (Element) parentNode;
+            } else {
+                parent = rootElement;
+            }
+            NodeList siblings = parent.getChildNodes();
+            java.util.List<Node> toRemove = new java.util.ArrayList<>();
+            for (int i = 0; i < siblings.getLength(); i++) {
+                Node sibling = siblings.item(i);
+                boolean isArrayElement = sibling.getNodeType() == Node.ELEMENT_NODE
+                        && sibling.getNodeName().equals(tagName);
+                boolean isWhitespace = sibling.getNodeType() == Node.TEXT_NODE
+                        && sibling.getTextContent().trim().isEmpty();
+                if (isArrayElement || isWhitespace) {
+                    toRemove.add(sibling);
+                }
+            }
+            for (Node n : toRemove) {
+                parent.removeChild(n);
+            }
+            clearedArrays.add(tagName);
+            current = parent;
+        }
+
+        // Create a new array item element
+        Element newItem = document.createElement(normParts[normParts.length - 1]);
+        current.appendChild(newItem);
+        return newItem;
+    }
+
+    @Override
+    public java.util.List<Object> getArrayItems(String arrayExpression) {
+        if (rootElement == null || document == null) return null;
+        String path = arrayExpression.startsWith("/") ? arrayExpression.substring(1) : arrayExpression;
+        String[] parts = path.split("/");
+        int startIdx = 0;
+        if (parts.length > 1 && parts[0].equals(rootElement.getNodeName())) {
+            startIdx = 1;
+        }
+        String[] normParts = new String[parts.length - startIdx];
+        System.arraycopy(parts, startIdx, normParts, 0, normParts.length);
+
+        // Navigate to parent of the array element
+        Element current = rootElement;
+        for (int i = 0; i < normParts.length - 1; i++) {
+            Element child = findChild(current, normParts[i]);
+            if (child == null) return null;
+            current = child;
+        }
+
+        // Collect all child elements with the target tag name
+        String tagName = normParts[normParts.length - 1];
+        java.util.List<Object> items = new java.util.ArrayList<>();
+        NodeList children = current.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE && child.getNodeName().equals(tagName)) {
+                items.add(child);
+            }
+        }
+        return items.isEmpty() ? null : items;
+    }
+
+    @Override
+    public Object addArrayItemInParent(Object parentItem, String relativePath) {
+        if (!(parentItem instanceof Element) || document == null) return null;
+        Element parent = (Element) parentItem;
+        String path = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+        String[] parts = path.split("/");
+
+        Element current = parent;
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            if (i == parts.length - 1) {
+                // Clear existing template siblings on first add (per parent element)
+                String clearKey = System.identityHashCode(parent) + "/" + part;
+                if (!clearedArrays.contains(clearKey)) {
+                    NodeList siblings = current.getChildNodes();
+                    java.util.List<Node> toRemove = new java.util.ArrayList<>();
+                    for (int j = 0; j < siblings.getLength(); j++) {
+                        Node sibling = siblings.item(j);
+                        boolean isArrayElement = sibling.getNodeType() == Node.ELEMENT_NODE
+                                && sibling.getNodeName().equals(part);
+                        boolean isWhitespace = sibling.getNodeType() == Node.TEXT_NODE
+                                && sibling.getTextContent().trim().isEmpty();
+                        if (isArrayElement || isWhitespace) {
+                            toRemove.add(sibling);
+                        }
+                    }
+                    for (Node n : toRemove) {
+                        current.removeChild(n);
+                    }
+                    clearedArrays.add(clearKey);
+                }
+                // Create array element and append
+                Element newItem = document.createElement(part);
+                current.appendChild(newItem);
+                return newItem;
+            } else {
+                // Intermediate: navigate or create
+                Element child = findChild(current, part);
+                if (child == null) {
+                    child = document.createElement(part);
+                    current.appendChild(child);
+                }
+                current = child;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void setValueInArrayItem(Object arrayItem, String relativePath, Object value) {
+        if (!(arrayItem instanceof Element)) return;
+        Element item = (Element) arrayItem;
+        String path = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+        String[] parts = path.split("/");
+
+        String lastPart = parts[parts.length - 1];
+
+        Element current = item;
+        for (int i = 0; i < parts.length - 1; i++) {
+            String part = parts[i];
+            if (part.startsWith("@")) {
+                current.setAttribute(part.substring(1), value == null ? "" : String.valueOf(value));
+                return;
+            }
+            Element child = document.createElement(part);
+            current.appendChild(child);
+            current = child;
+        }
+
+        if (lastPart.startsWith("@")) {
+            item.setAttribute(lastPart.substring(1), value == null ? "" : String.valueOf(value));
+        } else {
+            Element leaf = document.createElement(lastPart);
+            leaf.setTextContent(value == null ? "" : String.valueOf(value));
+            item.appendChild(leaf);
+        }
     }
 
     @Override

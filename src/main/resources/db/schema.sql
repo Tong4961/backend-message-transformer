@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS mapping_rule (
     condition_value VARCHAR(500) COMMENT '条件满足时的赋值',
     priority INT DEFAULT 0 COMMENT '优先级',
     description VARCHAR(500) COMMENT '描述',
+    mapping_type VARCHAR(20) DEFAULT 'DIRECT' COMMENT '映射类型: DIRECT/CONSTANT/FUNCTION/LOOP',
+    loop_config TEXT COMMENT '循环配置JSON',
     enabled TINYINT DEFAULT 1,
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

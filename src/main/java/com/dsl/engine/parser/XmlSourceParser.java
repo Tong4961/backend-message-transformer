@@ -1,5 +1,6 @@
 package com.dsl.engine.parser;
 
+import com.dsl.engine.model.NodeWithParent;
 import com.dsl.engine.model.TreeNode;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.*;
@@ -7,6 +8,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.*;
 import java.io.ByteArrayInputStream;
 import java.util.*;
+import java.util.ArrayList;
 
 @Component
 public class XmlSourceParser implements SourceParser {
@@ -133,5 +135,131 @@ public class XmlSourceParser implements SourceParser {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    @Override
+    public List<String> extractArray(String data, String expression) {
+        List<String> items = new ArrayList<>();
+        try {
+            Document doc = DocumentBuilderFactory.newInstance()
+                    .newDocumentBuilder()
+                    .parse(new ByteArrayInputStream(data.getBytes("UTF-8")));
+            XPath xpath = XPathFactory.newInstance().newXPath();
+            NodeList nodes = (NodeList) xpath.evaluate(expression, doc, XPathConstants.NODESET);
+            for (int i = 0; i < nodes.getLength(); i++) {
+                items.add(nodes.item(i).getTextContent());
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return items;
+    }
+
+    @Override
+    public List<Object> extractNodeContexts(String data, String expression) {
+        List<Object> nodes = new ArrayList<>();
+        try {
+            Document doc = DocumentBuilderFactory.newInstance()
+                    .newDocumentBuilder()
+                    .parse(new ByteArrayInputStream(data.getBytes("UTF-8")));
+            XPath xpath = XPathFactory.newInstance().newXPath();
+            NodeList nodeList = (NodeList) xpath.evaluate(expression, doc, XPathConstants.NODESET);
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node node = nodeList.item(i);
+                Node parent = node.getParentNode();
+                Object parentCtx = (parent instanceof Element) ? parent : null;
+                // Generate parentId based on parent's position in its parent
+                String parentId = null;
+                if (parent instanceof Element) {
+                    Element parentElem = (Element) parent;
+                    // Use parent's tag name + index as identifier
+                    Node grandParent = parent.getParentNode();
+                    if (grandParent instanceof Element) {
+                        NodeList siblings = ((Element) grandParent).getElementsByTagName(parentElem.getTagName());
+                        for (int j = 0; j < siblings.getLength(); j++) {
+                            if (siblings.item(j) == parent) {
+                                parentId = parentElem.getTagName() + "[" + j + "]";
+                                break;
+                            }
+                        }
+                    } else {
+                        parentId = parentElem.getTagName() + "[0]";
+                    }
+                }
+                nodes.add(new NodeWithParent(node, parentCtx, parentId));
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return nodes;
+    }
+
+    @Override
+    public Object extractValueFromContext(Object context, String expression) {
+        if (context == null) return null;
+        // Unwrap NodeWithParent
+        if (context instanceof NodeWithParent) {
+            context = ((NodeWithParent) context).getNode();
+        }
+        if (context instanceof Node) {
+            Node node = (Node) context;
+            // If expression is empty, return text content of current node
+            if (expression == null || expression.isEmpty()) {
+                return node.getTextContent();
+            }
+            // Handle attributes: @attrName
+            if (expression.startsWith("@") && node instanceof Element) {
+                Element elem = (Element) node;
+                String attrName = expression.substring(1);
+                return elem.getAttribute(attrName);
+            }
+            // Handle path expressions (e.g., "telecom/value" or "telecom")
+            if (node instanceof Element) {
+                Element elem = (Element) node;
+                String[] parts = expression.split("/");
+                Element current = elem;
+                for (int i = 0; i < parts.length; i++) {
+                    String part = parts[i];
+                    if (part.isEmpty()) continue;
+                    // Find child element with matching tag name
+                    NodeList children = current.getChildNodes();
+                    Element found = null;
+                    for (int j = 0; j < children.getLength(); j++) {
+                        if (children.item(j) instanceof Element) {
+                            Element child = (Element) children.item(j);
+                            if (child.getTagName().equals(part)) {
+                                found = child;
+                                break;
+                            }
+                        }
+                    }
+                    if (found == null) {
+                        return null;
+                    }
+                    if (i == parts.length - 1) {
+                        // Last part, return text content
+                        return found.getTextContent();
+                    }
+                    current = found;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Object getParentContext(Object context) {
+        if (context instanceof NodeWithParent) {
+            // Return parentId for grouping, not the parent node object
+            String parentId = ((NodeWithParent) context).getParentId();
+            return parentId != null ? parentId : ((NodeWithParent) context).getParent();
+        }
+        if (context instanceof Node) {
+            Node parent = ((Node) context).getParentNode();
+            if (parent instanceof Element) {
+                return parent;
+            }
+        }
+        return null;
     }
 }

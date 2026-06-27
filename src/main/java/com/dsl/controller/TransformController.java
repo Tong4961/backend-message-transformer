@@ -141,6 +141,8 @@ public class TransformController {
         vo.setNullPolicy(rule.getNullPolicy());
         vo.setConditionExpression(rule.getConditionExpression());
         vo.setConditionValue(rule.getConditionValue());
+        vo.setMappingType(rule.getMappingType());
+        vo.setLoopConfig(rule.getLoopConfig());
         return vo;
     }
 

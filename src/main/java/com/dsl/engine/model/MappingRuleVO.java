@@ -14,4 +14,6 @@ public class MappingRuleVO {
     private String nullPolicy;
     private String conditionExpression;
     private String conditionValue;
+    private String mappingType;
+    private String loopConfig;
 }
