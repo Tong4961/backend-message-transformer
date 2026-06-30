@@ -124,6 +124,7 @@ public class JsonTargetBuilder implements TargetBuilder {
     }
 
     private final java.util.Set<String> clearedArrays = new java.util.HashSet<>();
+    private final java.util.Map<String, JsonNode> arrayBlueprints = new java.util.HashMap<>();
 
     @Override
     public Object addArrayItem(String arrayExpression) {
@@ -148,6 +149,14 @@ public class JsonTargetBuilder implements TargetBuilder {
                     current.set(key, array);
                 }
 
+                // Save blueprint from first template item before clearing
+                if (!clearedArrays.contains(key) && array.size() > 0) {
+                    JsonNode first = array.get(0);
+                    if (first.isObject()) {
+                        arrayBlueprints.put(key, first);
+                    }
+                }
+
                 // Clear template sample items on first add
                 if (!clearedArrays.contains(key)) {
                     array.removeAll();
@@ -155,8 +164,14 @@ public class JsonTargetBuilder implements TargetBuilder {
                 }
 
                 if (i == parts.length - 1) {
-                    // Final segment: append new item and return it
-                    ObjectNode item = objectMapper.createObjectNode();
+                    // Final segment: append new item, using blueprint if available
+                    ObjectNode item;
+                    JsonNode blueprint = arrayBlueprints.get(key);
+                    if (blueprint != null) {
+                        item = (ObjectNode) blueprint.deepCopy();
+                    } else {
+                        item = objectMapper.createObjectNode();
+                    }
                     array.add(item);
                     return item;
                 } else {
@@ -171,7 +186,13 @@ public class JsonTargetBuilder implements TargetBuilder {
                             current = newObj;
                         }
                     } else {
-                        ObjectNode newObj = objectMapper.createObjectNode();
+                        ObjectNode newObj;
+                        JsonNode blueprint = arrayBlueprints.get(key);
+                        if (blueprint != null) {
+                            newObj = (ObjectNode) blueprint.deepCopy();
+                        } else {
+                            newObj = objectMapper.createObjectNode();
+                        }
                         array.add(newObj);
                         current = newObj;
                     }
@@ -195,6 +216,13 @@ public class JsonTargetBuilder implements TargetBuilder {
                         array = objectMapper.createArrayNode();
                         current.set(part, array);
                     }
+                    // Save blueprint from first template item before clearing
+                    if (!clearedArrays.contains(part) && array.size() > 0) {
+                        JsonNode first = array.get(0);
+                        if (first.isObject()) {
+                            arrayBlueprints.put(part, first);
+                        }
+                    }
                     if (!clearedArrays.contains(part)) {
                         // Don't clear if we just converted from object
                         if (!(existingNode != null && existingNode.isObject())) {
@@ -202,7 +230,13 @@ public class JsonTargetBuilder implements TargetBuilder {
                         }
                         clearedArrays.add(part);
                     }
-                    ObjectNode item = objectMapper.createObjectNode();
+                    ObjectNode item;
+                    JsonNode blueprint = arrayBlueprints.get(part);
+                    if (blueprint != null) {
+                        item = (ObjectNode) blueprint.deepCopy();
+                    } else {
+                        item = objectMapper.createObjectNode();
+                    }
                     array.add(item);
                     return item;
                 } else {
@@ -311,13 +345,26 @@ public class JsonTargetBuilder implements TargetBuilder {
                     array = objectMapper.createArrayNode();
                     current.set(part, array);
                 }
-                // Clear template sample items on first add per parent
+                // Save blueprint from first template item before clearing
                 String clearKey = System.identityHashCode(parent) + "/" + part;
+                if (!clearedArrays.contains(clearKey) && array.size() > 0) {
+                    JsonNode first = array.get(0);
+                    if (first.isObject()) {
+                        arrayBlueprints.put(clearKey, first);
+                    }
+                }
+                // Clear template sample items on first add per parent
                 if (!clearedArrays.contains(clearKey)) {
                     array.removeAll();
                     clearedArrays.add(clearKey);
                 }
-                ObjectNode item = objectMapper.createObjectNode();
+                ObjectNode item;
+                JsonNode blueprint = arrayBlueprints.get(clearKey);
+                if (blueprint != null) {
+                    item = (ObjectNode) blueprint.deepCopy();
+                } else {
+                    item = objectMapper.createObjectNode();
+                }
                 array.add(item);
                 return item;
             } else {

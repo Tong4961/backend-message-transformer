@@ -18,8 +18,9 @@ public class XmlSyntaxValidator implements Validator {
         }
 
         try {
-            Document doc = DocumentBuilderFactory.newInstance()
-                    .newDocumentBuilder()
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            dbf.setNamespaceAware(false);
+            Document doc = dbf.newDocumentBuilder()
                     .parse(new ByteArrayInputStream(content.getBytes("UTF-8")));
             context.setDocument(doc);
             context.setRootElementName(doc.getDocumentElement().getNodeName());

@@ -183,16 +183,10 @@ public class XmlTargetBuilder implements TargetBuilder {
         }
 
         // Clear existing template array siblings on first loop add
+        // current is already the container (parent of array items) after the nav loop
         String tagName = normParts[normParts.length - 1];
         if (!clearedArrays.contains(tagName)) {
-            Node parentNode = current.getParentNode();
-            Element parent;
-            if (parentNode instanceof Element) {
-                parent = (Element) parentNode;
-            } else {
-                parent = rootElement;
-            }
-            NodeList siblings = parent.getChildNodes();
+            NodeList siblings = current.getChildNodes();
             java.util.List<Node> toRemove = new java.util.ArrayList<>();
             for (int i = 0; i < siblings.getLength(); i++) {
                 Node sibling = siblings.item(i);
@@ -205,10 +199,9 @@ public class XmlTargetBuilder implements TargetBuilder {
                 }
             }
             for (Node n : toRemove) {
-                parent.removeChild(n);
+                current.removeChild(n);
             }
             clearedArrays.add(tagName);
-            current = parent;
         }
 
         // Create a new array item element

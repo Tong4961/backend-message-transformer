@@ -18,12 +18,20 @@ public class XmlSourceParser implements SourceParser {
         return "XML";
     }
 
+    /**
+     * 解析 XML 为 Document，关闭命名空间感知。
+     * HL7 V3 等带默认 xmlns 的 XML，XPath 无前缀表达式需匹配空命名空间元素。
+     */
+    private Document parseDocument(String data) throws Exception {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(false);
+        return dbf.newDocumentBuilder().parse(new ByteArrayInputStream(data.getBytes("UTF-8")));
+    }
+
     @Override
     public List<TreeNode> parseStructure(String data) {
         try {
-            Document doc = DocumentBuilderFactory.newInstance()
-                    .newDocumentBuilder()
-                    .parse(new ByteArrayInputStream(data.getBytes("UTF-8")));
+            Document doc = parseDocument(data);
             Element root = doc.getDocumentElement();
             List<TreeNode> result = new ArrayList<>();
             parseNode(root, "/" + root.getNodeName(), result);
@@ -135,9 +143,7 @@ public class XmlSourceParser implements SourceParser {
     @Override
     public Object extractValue(String data, String expression) {
         try {
-            Document doc = DocumentBuilderFactory.newInstance()
-                    .newDocumentBuilder()
-                    .parse(new ByteArrayInputStream(data.getBytes("UTF-8")));
+            Document doc = parseDocument(data);
             XPath xpath = XPathFactory.newInstance().newXPath();
             // Try as string first
             String result = xpath.evaluate(expression, doc);
@@ -158,9 +164,7 @@ public class XmlSourceParser implements SourceParser {
     public List<String> extractArray(String data, String expression) {
         List<String> items = new ArrayList<>();
         try {
-            Document doc = DocumentBuilderFactory.newInstance()
-                    .newDocumentBuilder()
-                    .parse(new ByteArrayInputStream(data.getBytes("UTF-8")));
+            Document doc = parseDocument(data);
             XPath xpath = XPathFactory.newInstance().newXPath();
             NodeList nodes = (NodeList) xpath.evaluate(expression, doc, XPathConstants.NODESET);
             for (int i = 0; i < nodes.getLength(); i++) {
@@ -176,14 +180,16 @@ public class XmlSourceParser implements SourceParser {
     public List<Object> extractNodeContexts(String data, String expression) {
         List<Object> nodes = new ArrayList<>();
         try {
-            Document doc = DocumentBuilderFactory.newInstance()
-                    .newDocumentBuilder()
-                    .parse(new ByteArrayInputStream(data.getBytes("UTF-8")));
+            Document doc = parseDocument(data);
             XPath xpath = XPathFactory.newInstance().newXPath();
             NodeList nodeList = (NodeList) xpath.evaluate(expression, doc, XPathConstants.NODESET);
             for (int i = 0; i < nodeList.getLength(); i++) {
                 Node node = nodeList.item(i);
                 Node parent = node.getParentNode();
+                // DOM spec: Attr.getParentNode() returns null, use getOwnerElement() instead
+                if (parent == null && node.getNodeType() == Node.ATTRIBUTE_NODE) {
+                    parent = ((Attr) node).getOwnerElement();
+                }
                 Object parentCtx = (parent instanceof Element) ? parent : null;
                 // Generate parentId based on parent's position in its parent
                 String parentId = null;
@@ -224,6 +230,14 @@ public class XmlSourceParser implements SourceParser {
             if (expression == null || expression.isEmpty()) {
                 return node.getTextContent();
             }
+            // Handle Attr nodes directly: return the attribute value
+            if (node instanceof Attr) {
+                Attr attr = (Attr) node;
+                if (expression.equals("@" + attr.getName()) || expression.equals(attr.getName())) {
+                    return attr.getValue();
+                }
+                return null;
+            }
             // Handle attributes: @attrName
             if (expression.startsWith("@") && node instanceof Element) {
                 Element elem = (Element) node;
@@ -238,6 +252,13 @@ public class XmlSourceParser implements SourceParser {
                 for (int i = 0; i < parts.length; i++) {
                     String part = parts[i];
                     if (part.isEmpty()) continue;
+                    // @attr must be the last segment, applied to current element
+                    if (part.startsWith("@")) {
+                        if (i == parts.length - 1) {
+                            return current.getAttribute(part.substring(1));
+                        }
+                        return null;
+                    }
                     // Find child element with matching tag name
                     NodeList children = current.getChildNodes();
                     Element found = null;
@@ -254,7 +275,6 @@ public class XmlSourceParser implements SourceParser {
                         return null;
                     }
                     if (i == parts.length - 1) {
-                        // Last part, return text content
                         return found.getTextContent();
                     }
                     current = found;

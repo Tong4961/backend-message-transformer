@@ -151,7 +151,8 @@ public class LoopValidator implements Validator {
             JsonNode item = items.get(i);
             String itemPath = loopPath + (items.size() > 1 ? "[" + (i + 1) + "]" : "");
             for (TreeNode child : loopNode.getChildren()) {
-                String childName = child.getName().startsWith("@") ? child.getName().substring(1) : child.getName();
+                // JSON 中 @ 是字段名的一部分，不像 XML 中 @ 仅表示属性引用
+                String childName = child.getName();
                 JsonNode childNode = item.get(childName);
                 if (childNode == null || childNode.isMissingNode()) {
                     result.addError(itemPath + "." + childName, "LOOP",

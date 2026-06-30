@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.w3c.dom.*;
 import javax.xml.xpath.*;
+import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -263,7 +264,14 @@ public class NodeConstraintValidator implements Validator {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat(pattern);
             sdf.setLenient(false);
-            sdf.parse(actual.trim());
+            String trimmed = actual.trim();
+            ParsePosition pos = new ParsePosition(0);
+            sdf.parse(trimmed, pos);
+            // 必须消费完整输入，否则像 "20260701150000Z" 用 yyyyMMddHHmmss 会忽略尾部 Z
+            if (pos.getIndex() != trimmed.length()) {
+                result.addError(instancePath, rule, message, pattern, trimmed);
+                return false;
+            }
             return true;
         } catch (Exception e) {
             result.addError(instancePath, rule, message, pattern, actual.trim());

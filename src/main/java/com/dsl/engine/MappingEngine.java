@@ -532,17 +532,21 @@ public class MappingEngine {
             fieldPath = "";
         }
 
-        // Get parent contexts from NodeWithParent (e.g. <id> → <provider>)
-        // and extract the leaf field name
+        // Use parent contexts (the array elements) instead of leaf contexts
+        // 直接取 NodeWithParent.getParent() 获取实际父节点用于值提取，
+        // 不能用 getParentContext()（它优先返回 parentId 字符串，仅用于分组）
         String srcNorm = sourcePath.replaceAll("\\[\\*\\]", "").replaceAll("\\[\\d+\\]", "");
         String[] srcParts = srcNorm.split("/");
         String srcField = srcParts.length > 0 ? srcParts[srcParts.length - 1] : "";
 
-        // Use parent contexts (the array elements) instead of leaf contexts
         java.util.List<Object> parentContexts = new java.util.ArrayList<>();
         for (Object ctx : nodeContexts) {
-            Object parent = parser.getParentContext(ctx);
-            parentContexts.add(parent != null ? parent : ctx);
+            if (ctx instanceof com.dsl.engine.model.NodeWithParent) {
+                Object p = ((com.dsl.engine.model.NodeWithParent) ctx).getParent();
+                parentContexts.add(p != null ? p : ctx);
+            } else {
+                parentContexts.add(ctx);
+            }
         }
 
         // Check if target array already has items
