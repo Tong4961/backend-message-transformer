@@ -56,11 +56,28 @@ public class XmlSourceParser implements SourceParser {
             // Parse child elements
             NodeList children = element.getChildNodes();
             boolean hasElementChild = false;
+
+            // 第一遍：统计同名子元素个数，决定是否需要索引后缀
+            Map<String, Integer> nameCount = new HashMap<>();
+            for (int i = 0; i < children.getLength(); i++) {
+                Node child = children.item(i);
+                if (child.getNodeType() == Node.ELEMENT_NODE) {
+                    nameCount.merge(child.getNodeName(), 1, Integer::sum);
+                }
+            }
+
+            // 第二遍：解析子元素，同名多个时加上 [idx] 区分路径
+            Map<String, Integer> nameIndex = new HashMap<>();
             for (int i = 0; i < children.getLength(); i++) {
                 Node child = children.item(i);
                 if (child.getNodeType() == Node.ELEMENT_NODE) {
                     hasElementChild = true;
-                    String childPath = path + "/" + child.getNodeName();
+                    String name = child.getNodeName();
+                    int idx = nameIndex.getOrDefault(name, 0);
+                    nameIndex.put(name, idx + 1);
+                    String childPath = nameCount.get(name) > 1
+                            ? path + "/" + name + "[" + (idx + 1) + "]"
+                            : path + "/" + name;
                     List<TreeNode> childResults = new ArrayList<>();
                     parseNode(child, childPath, childResults);
                     for (TreeNode cr : childResults) {

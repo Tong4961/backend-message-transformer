@@ -4,7 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dsl.common.exception.BizException;
 import com.dsl.entity.Template;
+import com.dsl.entity.TemplateNodeConfig;
+import com.dsl.entity.TemplateNodeConstraint;
+import com.dsl.entity.TemplateSearchField;
 import com.dsl.mapper.TemplateMapper;
+import com.dsl.mapper.TemplateNodeConfigMapper;
+import com.dsl.mapper.TemplateNodeConstraintMapper;
+import com.dsl.mapper.TemplateSearchFieldMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +23,18 @@ import java.util.Map;
 public class TemplateService {
 
     private final TemplateMapper templateMapper;
+    private final TemplateNodeConstraintMapper constraintMapper;
+    private final TemplateNodeConfigMapper nodeConfigMapper;
+    private final TemplateSearchFieldMapper searchFieldMapper;
 
-    public TemplateService(TemplateMapper templateMapper) {
+    public TemplateService(TemplateMapper templateMapper,
+                           TemplateNodeConstraintMapper constraintMapper,
+                           TemplateNodeConfigMapper nodeConfigMapper,
+                           TemplateSearchFieldMapper searchFieldMapper) {
         this.templateMapper = templateMapper;
+        this.constraintMapper = constraintMapper;
+        this.nodeConfigMapper = nodeConfigMapper;
+        this.searchFieldMapper = searchFieldMapper;
     }
 
     public List<Template> list() {
@@ -111,6 +126,12 @@ public class TemplateService {
 
     @Transactional
     public void delete(Long id) {
+        constraintMapper.delete(new LambdaQueryWrapper<TemplateNodeConstraint>()
+                .eq(TemplateNodeConstraint::getTemplateId, id));
+        nodeConfigMapper.delete(new LambdaQueryWrapper<TemplateNodeConfig>()
+                .eq(TemplateNodeConfig::getTemplateId, id));
+        searchFieldMapper.delete(new LambdaQueryWrapper<TemplateSearchField>()
+                .eq(TemplateSearchField::getTemplateId, id));
         templateMapper.deleteById(id);
     }
 }

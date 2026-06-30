@@ -25,7 +25,9 @@ public class JsonSourceParser implements SourceParser {
         try {
             JsonNode root = objectMapper.readTree(data);
             List<TreeNode> result = new ArrayList<>();
-            parseNode(root, "$", result);
+            TreeNode rootNode = new TreeNode("$", "$", "OBJECT");
+            parseNode(root, "$", rootNode.getChildren());
+            result.add(rootNode);
             return result;
         } catch (Exception e) {
             throw new RuntimeException("JSON解析失败: " + e.getMessage(), e);
