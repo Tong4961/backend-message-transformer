@@ -2,7 +2,7 @@ CREATE DATABASE IF NOT EXISTS `dsl` DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unic
 USE `dsl`;
 
 -- 转换器主表
-CREATE TABLE IF NOT EXISTS converter (
+CREATE TABLE IF NOT EXISTS template_converter (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(100) NOT NULL UNIQUE COMMENT '转换器编码',
     name VARCHAR(200) NOT NULL COMMENT '转换器名称',
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS converter (
 ) ENGINE=InnoDB COMMENT='转换器表';
 
 -- 映射规则表
-CREATE TABLE IF NOT EXISTS mapping_rule (
+CREATE TABLE IF NOT EXISTS template_mapping_rule (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     converter_id BIGINT NOT NULL COMMENT '转换器ID',
     source_expression VARCHAR(500) COMMENT '源表达式(XPath/JsonPath)',
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS mapping_rule (
 ) ENGINE=InnoDB COMMENT='映射规则表';
 
 -- 转换器版本表
-CREATE TABLE IF NOT EXISTS converter_version (
+CREATE TABLE IF NOT EXISTS template_converter_version (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     converter_id BIGINT NOT NULL COMMENT '转换器ID',
     version INT NOT NULL COMMENT '版本号',
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS plugin (
 ) ENGINE=InnoDB COMMENT='插件表';
 
 -- 审计日志表
-CREATE TABLE IF NOT EXISTS audit_log (
+CREATE TABLE IF NOT EXISTS template_audit_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     trace_id VARCHAR(64) NOT NULL COMMENT '追踪ID',
     converter_id BIGINT COMMENT '转换器ID',

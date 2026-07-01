@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("mapping_rule")
+@TableName("template_mapping_rule")
 public class MappingRule {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;

@@ -6,6 +6,6 @@ import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Param;
 
 public interface ConverterMapper extends BaseMapper<Converter> {
-    @Delete("DELETE FROM converter WHERE code = #{code}")
+    @Delete("DELETE FROM template_converter WHERE code = #{code}")
     int physicalDeleteByCode(@Param("code") String code);
 }

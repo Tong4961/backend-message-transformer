@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("converter")
+@TableName("template_converter")
 public class Converter {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;

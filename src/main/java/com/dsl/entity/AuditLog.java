@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("audit_log")
+@TableName("template_audit_log")
 public class AuditLog {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
